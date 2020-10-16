@@ -1,5 +1,5 @@
 /* run all schedulers using
-for i in $(seq 0 47); do make SCHEDULER=$i; done
+for i in $(seq 0 49); do make SCHEDULER=$i; done
 */
 
 #include "Halide.h"
@@ -1546,6 +1546,56 @@ class HalideDemosaic : public Generator<HalideDemosaic> {
                     interpolation_y.specialize(cfa_pattern == GRBG);
                     interpolation_y.specialize(cfa_pattern == BGGR);
                     interpolation_y.specialize(cfa_pattern == GBRG);
+                    deinterld_bound.compute_inline();
+                    input_bound.compute_at(img_output, yo_i).store_at(img_output, yo_o);
+                    break;
+
+                case 48:
+                    //if cfa_pattern == RGGB and the other conditions is outside loop img_output
+                    img_output
+                        .compute_root()
+                        .bound(c, 0, 3).unroll(c)
+                        .align_bounds(y, 2, 0).split(y, yo, yi, 2)
+                        .split(yo, yo_o, yo_i, 16).parallel(yo_o)
+                        .split(x, xo, xi, vector_size).vectorize(xi)
+                        .reorder(xi, xo, c, yi, yo_i, yo_o)
+                    ;
+                    white_balancing.compute_inline();
+                    interpolation.compute_inline();
+                    interpolation_x.compute_inline();
+                    interpolation_y
+                        .compute_at(img_output, yo_i)
+                        .unroll(c)
+                        .unroll(y)
+                        .align_bounds(x, 2, 1).split(x, xo, xi, vector_size).vectorize(xi)
+                    ;
+                    img_output.specialize(cfa_pattern == RGGB);
+                    img_output.specialize(cfa_pattern == GRBG);
+                    img_output.specialize(cfa_pattern == BGGR);
+                    img_output.specialize(cfa_pattern == GBRG);
+                    deinterld_bound.compute_inline();
+                    input_bound.compute_at(img_output, yo_i).store_at(img_output, yo_o);
+                    break;
+
+                case 49:
+                    // no if from specialize
+                    img_output
+                        .compute_root()
+                        .bound(c, 0, 3).unroll(c)
+                        .align_bounds(y, 2, 0).split(y, yo, yi, 2)
+                        .split(yo, yo_o, yo_i, 16).parallel(yo_o)
+                        .split(x, xo, xi, vector_size).vectorize(xi)
+                        .reorder(xi, xo, c, yi, yo_i, yo_o)
+                    ;
+                    white_balancing.compute_inline();
+                    interpolation.compute_inline();
+                    interpolation_x.compute_inline();
+                    interpolation_y
+                        .compute_at(img_output, yo_i)
+                        .unroll(c)
+                        .unroll(y)
+                        .align_bounds(x, 2, 1).split(x, xo, xi, vector_size).vectorize(xi)
+                    ;
                     deinterld_bound.compute_inline();
                     input_bound.compute_at(img_output, yo_i).store_at(img_output, yo_o);
                     break;
