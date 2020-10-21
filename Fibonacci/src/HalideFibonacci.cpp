@@ -9,7 +9,10 @@ class HalideFibonacci : public Generator<HalideFibonacci> {
         Output<uint64_t> output{"output"};
 
         void generate() {
+            // min, extent
             i = RDom(2, input - 1);
+            // input = 5
+            // i = 2 3 4 5
 
             fibonacci(x) = undef<uint64_t>();
             fibonacci(0) = u64(0);
