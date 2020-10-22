@@ -57,6 +57,12 @@ class HalideBoxFilter : public Generator<HalideBoxFilter> {
                     sum_i(x, y, c) = undef<uint64_t>();
                     sum_i(-1, y, c) = u64(0);
                     sum_i(x, -1, c) = u64(0);
+                    // img_input(kernel.x, kernel.y, c) =
+                    //       sum_i(kernel.x,     kernel.y,     c)
+                    //     - sum_i(kernel.x - 1, kernel.y    , c)
+                    //     - sum_i(kernel.x    , kernel.y - 1, c)
+                    //     + sum_i(kernel.x - 1, kernel.y - 1, c)
+                    // ;
                     sum_i(kernel.x, kernel.y, c) =
                           img_input(kernel.x, kernel.y,     c)
                         + sum_i(kernel.x - 1, kernel.y    , c)
