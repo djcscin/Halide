@@ -16,7 +16,7 @@ class HalideHistEq : public Generator<HalideHistEq> {
         GeneratorParam<uint> scheduler{"scheduler", 0};
 
         void generate() {
-            r_hist = RDom(img_input);
+            r_hist = RDom(img_input); // RDom(0, img_input.width(), 0, img_input.height())
             hist(i) = 0;
             hist(img_input(r_hist.x, r_hist.y)) += 1;
 
@@ -56,6 +56,14 @@ class HalideHistEq : public Generator<HalideHistEq> {
                     ;
                     break;
 
+                // A propriedade da associatividade diz que a ordem das operações não altera o resultado
+                // hist(img_input(r_hist.x, r_hist.y)) += 1;
+                // Transforma RVar r_hist.y em uma Var ry
+                // intm = hist.update().rfactor(r_hist.y, ry);
+                // ou
+                // intm = hist.update().rfactor({{r_hist.y, ry}}); // lista das RVar, Var
+                // intm(ry, img_input(r_hist.x, ry)) += 1;
+                // hist(i) += intm(r_hist.y, i);
                 case 1:
                     img_output
                         .compute_root()
