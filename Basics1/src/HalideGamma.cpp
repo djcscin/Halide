@@ -23,7 +23,7 @@ class HalideGenGamma : public Generator<HalideGenGamma> {
         // variáveis de tempo de compilação
         // conseguimos usar na metaprogramação com if, for, while
         // vem no comando de execução do binário do generator
-        GeneratorParam<uint> version{"version", 0};
+        GeneratorParam<uint32_t> version{"version", 0};
 
         // duas funções: o generate com o algoritmo e
         // o schedule com o schedule ou as definições para auto_schedule
