@@ -26,6 +26,9 @@ GPARS=
 ifdef SCHEDULER
 	GPARS=scheduler=$(SCHEDULER)
 endif
+ifdef SPLIT_SIZE
+	GPARS+= split_size=$(SPLIT_SIZE)
+endif
 TARGET=host
 ifdef PROFILE
 	ifeq ($(PROFILE), true)
@@ -50,7 +53,7 @@ bin/cd: src/cd.cpp bin/cd.o
 
 images_output: bin/cd
 	@mkdir -p $@
-	@for i in 1.5 2.5 5.0 10.0; do $^ ../images/synthetic_boxes_night.png $$i $@/synthetic_boxes_night_$$i.png; done
+	@for i in 1.5 2.5 5.0 7.5 10.0; do $^ ../images/synthetic_boxes_night.png $$i $@/synthetic_boxes_night_$$i.png; done
 
 clean:
 	@rm -rf bin images_output

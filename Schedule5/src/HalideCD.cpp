@@ -1,6 +1,10 @@
-/*
-for i in $(seq 0 4); do make SCHEDULER=$i; done
+/* run all schedulers using
+for i in $(seq 0 6); do make SCHEDULER=$i; done
 */
+/* test different split size
+for i in $(seq 0 6); do for ss in 8 16 32 64 128 256 512; do make SCHEDULER=$i SPLIT_SIZE=$ss; done; done
+*/
+
 #include "Halide.h"
 
 using namespace Halide;
@@ -13,7 +17,7 @@ class HalideCD : public Generator<HalideCD> {
 
         Output<Buffer<uint8_t>> img_output{"img_output", 3};
 
-        GeneratorParam<uint32_t> scheduler{"scheduler", 3};
+        GeneratorParam<uint32_t> scheduler{"scheduler", 6};
         GeneratorParam<int> split_size{"split_size", 32};
 
         void generate() {
@@ -46,7 +50,6 @@ class HalideCD : public Generator<HalideCD> {
             } else {
                 int vector_size = get_target().natural_vector_size<float>();
                 switch (scheduler) {
-                    default:
                     case 0:
                         weights.compute_root();
                         sum_weights.compute_root();
@@ -54,22 +57,22 @@ class HalideCD : public Generator<HalideCD> {
                         img_output
                             .compute_root()
                             .bound(c, 0, 3)
-                            .unroll(c) // eliminar o mux/select do output_f32
+                            .unroll(c) // para eliminar o mux/select do output_f32
                             .split(y, yo, yi, split_size).parallel(yo)
                             .vectorize(x, vector_size)
                             .reorder(x, c, yi, yo) // paralelizar a variável mais externa
                         ;
-                        yCbCr_output // não testei, mas talvez ela inline seria melhor
+                        yCbCr_output // possivelmente seria melhor inline (testado no scheduler 6)
                             .compute_at(img_output, yi)
-                            .store_at(img_output, yo) // não testei, mas talvez não precise do store_at
-                            .unroll(c) // eliminar o mux/select
+                            .store_at(img_output, yo) // não é necessário o store_at (testado no scheduler 5) - ver allocate no stmt
+                            .unroll(c) // para eliminar o mux/select
                             .vectorize(x, vector_size) //.split(x, x, xi, vector_size).vectorize(xi)
                             .reorder(x, c, y) // talvez seja uma boa alternativa de teste de diferente schedule colocar o c mais interno
                             //.split(c, x, y) <-> .split(xi, c, x, y) -> não testei
                         ;
                         yCbCr_blurred_intm
                             .compute_at(img_output, yi)
-                            .store_at(img_output, yo)
+                            .store_at(img_output, yo) // não é necessário o store_at (testado no scheduler 5) - ver allocate no stmt
                             .vectorize(x, vector_size)
                         ;
                         yCbCr_blurred_intm.update()
@@ -79,7 +82,7 @@ class HalideCD : public Generator<HalideCD> {
                         ;
                         yCbCr_blurred
                             .compute_at(img_output, yi)
-                            .store_at(img_output, yo) // não testei, mas talvez não precise do store_at
+                            .store_at(img_output, yo) // não é necessário o store_at (testado no scheduler 5) - ver allocate no stmt
                             .vectorize(x, vector_size)
                         ;
                         yCbCr_blurred.update()
@@ -89,7 +92,7 @@ class HalideCD : public Generator<HalideCD> {
                         yCbCr_input
                             .compute_at(img_output, yi)
                             .store_at(img_output, yo)
-                            .unroll(c) // eliminar o mux/select
+                            .unroll(c) // para eliminar o mux/select
                             .vectorize(x, vector_size)
                             .reorder(x, c, y)
                         ;
@@ -219,7 +222,7 @@ class HalideCD : public Generator<HalideCD> {
                             .reorder(x, c, y)
                         ;
                         // É basicamente como o compute_with, mas não podemos fazer entre updates
-                        // Contra: a cópia
+                        // Contra: a cópia, que não tem no compute_with
                         // BEFORE
                         // for c:
                         //     for y:
@@ -278,7 +281,7 @@ class HalideCD : public Generator<HalideCD> {
                         ;
                         yCbCr_input.in(yCbCr_output)
                             .compute_at(img_output, yi)
-                            .store_at(img_output, yo)
+                            .store_at(img_output, yo) // não é necessário o store_at (testado no scheduler 5) - ver allocate no stmt
                             .unroll(c)
                             .vectorize(x, vector_size)
                         ;
@@ -364,6 +367,114 @@ class HalideCD : public Generator<HalideCD> {
                         yCbCr_input.in(yCbCr_output)
                             .compute_at(img_output, yi)
                             .store_at(img_output, yo)
+                            .unroll(c)
+                            .vectorize(x, vector_size)
+                        ;
+                        break;
+
+                    case 5:
+                        weights.compute_root();
+                        sum_weights.compute_root();
+                        w.compute_root();
+                        img_output
+                            .compute_root()
+                            .bound(c, 0, 3)
+                            .unroll(c)
+                            .split(y, yo, yi, split_size).parallel(yo)
+                            .vectorize(x, vector_size)
+                            .reorder(x, c, yi, yo)
+                        ;
+                        yCbCr_output
+                            .compute_at(img_output, yi)
+                            .unroll(c)
+                            .vectorize(x, vector_size)
+                            .reorder(x, c, y)
+                        ;
+                        yCbCr_blurred_intm.in()
+                            .compute_at(img_output, yi)
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                        ;
+                        yCbCr_blurred_intm
+                            .compute_at(yCbCr_blurred_intm.in(), xo)
+                            .vectorize(x, vector_size)
+                        ;
+                        yCbCr_blurred_intm.update()
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                            .reorder(xi, kernel, xo, y, c)
+                        ;
+                        yCbCr_blurred.in()
+                            .compute_at(img_output, yi)
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                        ;
+                        yCbCr_blurred
+                            .compute_at(yCbCr_blurred.in(), xo)
+                            .vectorize(x, vector_size)
+                        ;
+                        yCbCr_blurred.update()
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                            .reorder(xi, kernel, xo, y, c)
+                        ;
+                        yCbCr_input.in(yCbCr_blurred_intm)
+                            .compute_at(img_output, yi)
+                            .store_at(img_output, yo)
+                            .unroll(c)
+                            .vectorize(x, vector_size)
+                            .reorder(x, c, y)
+                        ;
+                        yCbCr_input.in(yCbCr_output)
+                            .compute_at(img_output, yi)
+                            .unroll(c)
+                            .vectorize(x, vector_size)
+                        ;
+                        break;
+
+                    default:
+                    case 6:
+                        weights.compute_root();
+                        sum_weights.compute_root();
+                        w.compute_root();
+                        img_output
+                            .compute_root()
+                            .bound(c, 0, 3)
+                            .unroll(c)
+                            .split(y, yo, yi, split_size).parallel(yo)
+                            .vectorize(x, vector_size)
+                            .reorder(x, c, yi, yo)
+                        ;
+                        yCbCr_blurred_intm.in()
+                            .compute_at(img_output, yi)
+                            .store_at(img_output, yo)
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                        ;
+                        yCbCr_blurred_intm
+                            .compute_at(yCbCr_blurred_intm.in(), xo)
+                            .vectorize(x, vector_size)
+                        ;
+                        yCbCr_blurred_intm.update()
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                            .reorder(xi, kernel, xo, y, c)
+                        ;
+                        yCbCr_blurred.in()
+                            .compute_at(img_output, yi)
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                        ;
+                        yCbCr_blurred
+                            .compute_at(yCbCr_blurred.in(), xo)
+                            .vectorize(x, vector_size)
+                        ;
+                        yCbCr_blurred.update()
+                            .split(x, xo, xi, vector_size).vectorize(xi)
+                            .reorder(xi, kernel, xo, y, c)
+                        ;
+                        yCbCr_input.in(yCbCr_blurred_intm)
+                            .compute_at(img_output, yi)
+                            .store_at(img_output, yo)
+                            .unroll(c)
+                            .vectorize(x, vector_size)
+                            .reorder(x, c, y)
+                        ;
+                        yCbCr_input.in(yCbCr_output)
+                            .compute_at(img_output, yi)
                             .unroll(c)
                             .vectorize(x, vector_size)
                         ;
