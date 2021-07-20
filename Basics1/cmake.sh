@@ -1,7 +1,8 @@
 #!/bin/bash
 
 mkdir -p bin && cd bin && \
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DHalide_DIR=$HALIDE_ROOT/lib/cmake/Halide .. && \
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DHalide_DIR=$HALIDE_ROOT/lib/cmake/Halide \
+-DHalideHelpers_DIR=$HALIDE_ROOT/lib/cmake/HalideHelpers .. && \
 cmake --build . && cd .. && \
 mkdir -p images_output && \
 bin/gamma1 ../images/final2016.jpg 0.5 2.2 ../images/final2017.jpg 0.5 2.2 images_output/final2020.jpg && \

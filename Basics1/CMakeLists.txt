@@ -15,7 +15,7 @@ target_link_libraries(gamma0 PRIVATE Halide::Halide Halide::ImageIO)
 add_executable(gamma_generator src/HalideGamma.cpp)
 target_link_libraries(gamma_generator PRIVATE Halide::Generator)
 
-add_halide_library(gamma FROM gamma_generator)
+add_halide_library(gamma FROM gamma_generator FUNCTION_NAME halide_gamma)
 
 add_executable(gamma1 src/gamma.cpp)
 target_link_libraries(gamma1 PRIVATE gamma Halide::ImageIO)

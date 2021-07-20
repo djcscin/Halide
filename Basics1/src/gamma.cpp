@@ -26,7 +26,7 @@ int main(int argc, char ** argv) {
     Buffer<uint8_t> input2 = load_image(path_input2);
     Buffer<uint8_t> output = Buffer<uint8_t>(input1.width(), input1.height(), input1.channels());
 
-    gamma(input1, a1, gamma1, input2, a2, gamma2, output);
+    halide_gamma(input1, a1, gamma1, input2, a2, gamma2, output);
 
     save_image(output, path_output);
 

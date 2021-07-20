@@ -30,7 +30,7 @@ int main(int argc, char ** argv) {
 
     printf("benchmark: %.2f ms\n",
         1e3*benchmark(3, 10, [&] {
-            gamma(input1, a1, gamma1, input2, a2, gamma2, output);
+            halide_gamma(input1, a1, gamma1, input2, a2, gamma2, output);
         })
     );
 

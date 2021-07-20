@@ -41,7 +41,7 @@ bin/gamma.generator: src/HalideGamma.cpp
 
 bin/gamma.o: bin/gamma.generator
 	@mkdir -p $(@D)
-	$^ -e $(GENERATOR_OUTPUTS) -o $(@D) -f gamma -g gamma target=$(TARGET) $(AUTO_SCHEDULER_PARS) $(GPARS)
+	$^ -e $(GENERATOR_OUTPUTS) -o $(@D) -f halide_gamma -n gamma -g gamma target=$(TARGET) $(AUTO_SCHEDULER_PARS) $(GPARS)
 	@rm $^
 
 bin/gamma: src/gamma.cpp bin/gamma.o

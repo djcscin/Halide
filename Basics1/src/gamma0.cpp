@@ -73,7 +73,7 @@ int main(int argc, char ** argv) {
     // Ele computa as funções usando na dim(0) entre 0 e input.width
     // na dim(1) entre 0 e input.height() e
     // na dim(2) entre 0 e input.channels()
-    Buffer<uint8_t> output = gamma_int.realize(input.width(), input.height(), input.channels());
+    Buffer<uint8_t> output = gamma_int.realize({input.width(), input.height(), input.channels()});
 
     //include halide_image_io.h
     //Halide::Tools::save_image(output, path_output);
