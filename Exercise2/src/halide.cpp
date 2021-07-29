@@ -3,6 +3,9 @@ Implemente schedulers para esse código Halide
 Faça schedulers que eliminem os três selects usando unroll e specialize
 Onde devemos usar unroll e specialize?
 Compare os tempos de execução com schedulers sem usar o specialize e diga o porquê a melhora não foi significativa.
+Observe que yuv_in tem domínios diferentes para gaussian1_int e output
+Faça schedulers que calculem yuv_in de formas diferentes para cada uma dessas funções
+Por que ao levar em consideração essas diferenças houve uma grande diminuição do tempo de execução?
 */
 
 #include "Halide.h"

@@ -9,11 +9,18 @@ ser usado na função onde ela é substituída, no caso, output. A melhora com o
 quando usada no gaussian, pois o select só tem duas opções de resultado com operações simples e a CPU é capaz de prever o
 resultado da operação sem problemas, uma vez que a condição não muda para cada um dos pixels. Além disso, o Halide de certa
 forma consegue eliminar a execução do gaussian2 sem a necessidade do specialize.
+
+Observe que yuv_in tem domínios diferentes para gaussian1_int e output
+Faça schedulers que calculem yuv_in de formas diferentes para cada uma dessas funções
+Por que ao levar em consideração essas diferenças houve uma grande diminuição do tempo de execução?
+RESPOSTA: Os canais de crominância são usados no filtro gaussiano e precisam que para cada linha de gaussian1_int 11 linhas
+de yuv_in serem computadas, enquanto que o valor do canal de luminância é usado apenas para os cálculos dos canais de mesma
+coordenada
 */
 /* run all schedulers using
-for i in $(seq 1 4); do echo SCHEDULER $i; make clean && make SCHEDULER=$i; done
+for i in $(seq 1 12); do echo SCHEDULER $i; make clean && make SCHEDULER=$i; done
 or
-for i in $(seq 1 4); do echo SCHEDULER $i; make clean && make test_desktop DESKTOP=true SCHEDULER=$i; done
+for i in $(seq 1 12); do echo SCHEDULER $i; make clean && make test_desktop DESKTOP=true SCHEDULER=$i; done
 */
 
 #include "Halide.h"
@@ -102,14 +109,9 @@ public:
                 .compute_root()
                 .split(y, yo, yi, parallel_size).parallel(yo)
                 .split(x, xo, xi, vector_size).vectorize(xi)
-                .bound(c, 0, 3).unroll(c)
+                .bound(c, 0, 3)
+                .unroll(c)
                 .reorder(xi, c, xo, yi, yo)
-            ;
-            yuv_in
-                .compute_at(output, yi).store_at(output, yo)
-                .split(x, xo, xi, vector_size).vectorize(xi)
-                .bound(c, 0, 3).unroll(c)
-                .reorder(xi, c, xo, y)
             ;
             gaussian1
                 .compute_at(output, yi).store_at(output, yo)
@@ -142,8 +144,12 @@ public:
 
             switch (scheduler) {
             case 1:
+            case 5:
+            case 9:
                 gaussian.specialize(run_twice);
             case 2:
+            case 6:
+            case 10:
                 gaussian
                     .compute_at(output, yi)
                     .split(x, xo, xi, vector_size).vectorize(xi)
@@ -151,8 +157,51 @@ public:
                 break;
 
             case 3:
+            case 7:
+            case 11:
                 output.specialize(run_twice);
             case 4:
+            case 8:
+            case 12:
+                break;
+
+            default:
+                break;
+            }
+
+            switch (scheduler){
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                yuv_in
+                    .compute_at(output, yi).store_at(output, yo)
+                    .split(x, xo, xi, vector_size).vectorize(xi)
+                    .unroll(c)
+                    .reorder(xi, c, xo, y)
+                ;
+                break;
+
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                yuv_in.in(output)
+                    .compute_at(output, yi).store_at(output, yo)
+                    .split(x, xo, xi, vector_size).vectorize(xi)
+                    .unroll(c)
+                    .reorder(xi, c, xo, y)
+                ;
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+                yuv_in.in(gaussian1_int)
+                    .compute_at(output, yi).store_at(output, yo)
+                    .split(x, xo, xi, vector_size).vectorize(xi)
+                    .unroll(c)
+                    .reorder(xi, c, xo, y)
+                ;
                 break;
 
             default:
