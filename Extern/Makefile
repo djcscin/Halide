@@ -5,8 +5,8 @@ CXX_ARM = $(HOME)/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-
 ARM_DIR = /data/local/tmp
 
 GENERATOR_DEPS     = ${HALIDE_ROOT}/tools/GenGen.cpp
-GENERATOR_OUTPUTS  = o,h,stmt
-CXX_FLAGS          = -std=c++11 -fno-rtti
+GENERATOR_OUTPUTS  = o,h
+CXX_FLAGS          = -std=c++1z -fno-rtti
 OPT_FLAGS          = -O3
 INCLUDES           = -I${HALIDE_ROOT}/include -Ibin
 LD_FLAGS           = -lHalide -ldl -lpthread -lz

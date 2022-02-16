@@ -3,7 +3,7 @@ CXX = g++
 
 GENERATOR_DEPS     = ${HALIDE_ROOT}/tools/GenGen.cpp
 GENERATOR_OUTPUTS  = o,h
-CXX_FLAGS          = -std=c++11 -fno-rtti
+CXX_FLAGS          = -std=c++1z -fno-rtti
 OPT_FLAGS          = -O3
 INCLUDES           = -I${HALIDE_ROOT}/include -Ibin -I../include -Iinclude
 LD_FLAGS           = -lHalide -ldl -lpthread -lz
