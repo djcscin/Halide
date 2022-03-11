@@ -40,14 +40,89 @@ namespace {
                 output.set_estimates({{0,4000},{0,3000},{0,3}});
             } else {
                 const int vector_size = get_target().natural_vector_size<float>();
+                const int parallel_size = 8;
                 Var xo{"xo"}, xi{"xi"};
+                RVar ryo{"ryo"}, ryi{"ryi"};
+                Func max_gray_intm;
 
-                output.compute_root()
-                    .split(x, xo, xi, vector_size)
-                    .reorder(xi, c, xo, y)
-                    .parallel(y)
-                ;
-                max_gray.compute_root();
+                switch (scheduler)
+                {
+                case 2:
+                    output.compute_root()
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .parallel(y)
+                    ;
+                    max_gray.compute_root();
+                    break;
+
+                case 3:
+                    output.compute_root()
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .parallel(y)
+                    ;
+                    max_gray.compute_root();
+                    gain.compute_at(output, xo)
+                        .vectorize(x, vector_size)
+                    ;
+                    break;
+
+                case 4:
+                    output.compute_root()
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .parallel(y)
+                    ;
+                    max_gray.compute_root();
+                    gain.compute_at(output, y)
+                        .vectorize(x, vector_size)
+                    ;
+                    break;
+
+                case 5:
+                    output.compute_root()
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .parallel(y)
+                    ;
+                    max_gray_intm = max_gray.update().rfactor(r_max_gray.y, y);
+                    // max_gray_intm(y) = 1e-5;
+                    // max_gray_intm(y) = max(gray(r_max_gray.x, y), max_gray_intm(y));
+                    // max_gray() = 1e-5;
+                    // max_gray() = max(max_gray_intm(r_max_gray.y), max_gray());
+                    max_gray_intm.compute_root()
+                        .parallel(y)
+                    ;
+                    max_gray_intm.update()
+                        .parallel(y)
+                    ;
+                    max_gray.compute_root();
+                    break;
+
+                case 6:
+                case 1:
+                default:
+                    output.compute_root()
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .parallel(y)
+                    ;
+                    max_gray_intm = max_gray.update().split(r_max_gray.y, ryo, ryi, parallel_size).rfactor(ryo, y);
+                    // max_gray_intm(y) = 1e-5;
+                    // max_gray_intm(y) = max(gray(r_max_gray.x, y*parallel_size + ryi), max_gray_intm(y));
+                    // max_gray() = 1e-5;
+                    // max_gray() = max(max_gray_intm(r_max_gray.y), max_gray());
+                    max_gray_intm.compute_root()
+                        .parallel(y)
+                    ;
+                    max_gray_intm.update()
+                        .parallel(y)
+                    ;
+                    max_gray.compute_root();
+                    break;
+                }
+
             }
         }
     };

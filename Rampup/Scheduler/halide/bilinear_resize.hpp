@@ -57,38 +57,87 @@ namespace {
                 Var yi{"yi"}, yo{"yo"};
                 Var yc{"yc"};
 
-                output.compute_root()
-                    .fuse(y, c, yc).parallel(yc)
-                    .vectorize(x, vector_size)
-                ;
+                switch (scheduler)
+                {
+                case 2:
+                case 1:
+                default:
+                    output.compute_root()
+                        .fuse(y, c, yc).parallel(yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    interpolation_y.compute_at(output, yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    kernel_x.compute_root();
+                    kernel_x.update(0)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_x.update(1)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_y.compute_root();
+                    kernel_y.update(0)
+                        .split(y, yo, yi, parallel_size)
+                        .parallel(yo)
+                        .vectorize(yi, vector_size)
+                    ;
+                    kernel_y.update(1)
+                        .split(y, yo, yi, parallel_size)
+                        .parallel(yo)
+                        .vectorize(yi, vector_size)
+                    ;
+                    break;
 
-                interpolation_y.compute_at(output, yc)
-                    .vectorize(x, vector_size)
-                ;
+                case 3:
+                    output.compute_root()
+                        .fuse(y, c, yc).parallel(yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    interpolation_y.compute_at(output, yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    kernel_x.compute_root();
+                    kernel_x.update(0)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_x.update(1)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_y.compute_at(output, yc);
+                    break;
 
-                kernel_x.compute_root();
-                kernel_x.update(0)
-                    .split(x, xo, xi, parallel_size)
-                    .parallel(xo)
-                    .vectorize(xi, vector_size)
-                ;
-                kernel_x.update(1)
-                    .split(x, xo, xi, parallel_size)
-                    .parallel(xo)
-                    .vectorize(xi, vector_size)
-                ;
-
-                kernel_y.compute_root();
-                kernel_y.update(0)
-                    .split(y, yo, yi, parallel_size)
-                    .parallel(yo)
-                    .vectorize(yi, vector_size)
-                ;
-                kernel_y.update(1)
-                    .split(y, yo, yi, parallel_size)
-                    .parallel(yo)
-                    .vectorize(yi, vector_size)
-                ;
+                case 4:
+                    output.compute_root()
+                        .reorder(x, c, y)
+                        .parallel(y)
+                        .vectorize(x, vector_size)
+                    ;
+                    interpolation_y.compute_at(output, c)
+                        .vectorize(x, vector_size)
+                    ;
+                    kernel_x.compute_root();
+                    kernel_x.update(0)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_x.update(1)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_y.compute_at(output, y);
+                    break;
+                }
             }
         }
 
