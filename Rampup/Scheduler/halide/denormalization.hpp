@@ -33,10 +33,16 @@ namespace {
                     Var y = output.args()[1];
                     Var c = output.args()[2];
 
-                    output.compute_root()
-                        .fuse(y, c, yc).parallel(yc)
-                        .vectorize(x, vector_size)
-                    ;
+                    if(out_define_schedule) {
+                        output
+                            .vectorize(x, vector_size)
+                        ;
+                        if(out_define_compute) {
+                            output.compute_root()
+                                .fuse(y, c, yc).parallel(yc)
+                            ;
+                        }
+                    }
                 }
             }
         }

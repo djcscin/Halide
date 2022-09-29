@@ -37,8 +37,6 @@ namespace {
                     break;
 
                 case 3:
-                case 1:
-                default:
                     output.compute_root()
                         .align_bounds(x, 2, 0)
                         .align_bounds(y, 2, 0)
@@ -47,6 +45,24 @@ namespace {
                         .parallel(yo)
                         .vectorize(xo, vector_size)
                     ;
+                    break;
+
+                case 1:
+                default:
+                    if(out_define_schedule) {
+                        output
+                            .align_bounds(x, 2, 0)
+                            .align_bounds(y, 2, 0)
+                            .split(x, xo, xi, 2).unroll(xi)
+                            .split(y, yo, yi, 2).unroll(yi)
+                            .vectorize(xo, vector_size)
+                        ;
+                        if(out_define_compute) {
+                            output.compute_root()
+                                .parallel(yo)
+                            ;
+                        }
+                    }
                     break;
                 }
             }

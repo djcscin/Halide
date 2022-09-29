@@ -30,11 +30,16 @@ namespace {
                 if(input.dimensions() == 2) {
                     const int vector_size = get_target().natural_vector_size<float>();
                     Var y = output.args()[1];
-
-                    output.compute_root()
-                        .parallel(y)
-                        .vectorize(x, vector_size)
-                    ;
+                    if(out_define_schedule) {
+                        output
+                            .vectorize(x, vector_size)
+                        ;
+                        if(out_define_compute) {
+                            output.compute_root()
+                                .parallel(y)
+                            ;
+                        }
+                    }
                 }
             }
         }

@@ -7,7 +7,7 @@
 namespace {
     using namespace Halide;
 
-    class RGB2YCbCr : public Generator<RGB2YCbCr>, HalideBase {
+    class RGB2YCbCr : public Generator<RGB2YCbCr>, public HalideBase {
     private:
         Var x{"x"}, y{"y"}, c{"c"};
     public:
@@ -34,14 +34,21 @@ namespace {
             } else {
                 const int vector_size = get_target().natural_vector_size<float>();
                 Var xo{"xo"}, xi{"xi"};
-                output.compute_root()
-                    .bound(c, 0, 3)
-                    .split(x, xo, xi, vector_size)
-                    .reorder(xi, c, xo, y)
-                    .unroll(c)
-                    .parallel(y)
-                    .vectorize(xi)
-                ;
+
+                if(out_define_schedule) {
+                    output
+                        .bound(c, 0, 3)
+                        .split(x, xo, xi, vector_size)
+                        .reorder(xi, c, xo, y)
+                        .unroll(c)
+                        .vectorize(xi)
+                    ;
+                    if(out_define_compute) {
+                        output.compute_root()
+                            .parallel(y)
+                        ;
+                    }
+                }
             }
         }
     };

@@ -28,11 +28,17 @@ namespace {
                 const int vector_size = get_target().natural_vector_size<float>();
                 Var xo{"xo"}, xi{"xi"};
 
-                output.compute_root()
-                    .split(x, xo, xi, vector_size)
-                    .reorder(xi, c, xo, y)
-                    .parallel(y)
-                ;
+                if(out_define_schedule) {
+                    output
+                        .split(x, xo, xi, vector_size).vectorize(xi)
+                        .reorder(xi, c, xo, y)
+                    ;
+                    if(out_define_compute) {
+                        output.compute_root()
+                            .parallel(y)
+                        ;
+                    }
+                }
             }
         }
     };

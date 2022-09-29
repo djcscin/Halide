@@ -20,6 +20,8 @@ namespace {
         Input<int> output_height{"output_height"};
         Output<Func> output{"output_br", Float(32), 3};
 
+        GeneratorParam<LoopLevel> kernel_y_compute_level{"kernel_y_compute_level", LoopLevel::inlined()};
+
         void generate() {
             // (input_x + 0.5f) / input_width = (x + 0.5f) / output_width
             // input_x + 0.5f = (x + 0.5f) * input_width / output_width
@@ -60,13 +62,8 @@ namespace {
                 switch (scheduler)
                 {
                 case 2:
-                case 1:
-                default:
                     output.compute_root()
                         .fuse(y, c, yc).parallel(yc)
-                        .vectorize(x, vector_size)
-                    ;
-                    interpolation_y.compute_at(output, yc)
                         .vectorize(x, vector_size)
                     ;
                     kernel_x.compute_root();
@@ -112,10 +109,42 @@ namespace {
                         .parallel(xo)
                         .vectorize(xi, vector_size)
                     ;
-                    kernel_y.compute_at(output, yc);
+                    kernel_y.compute_root();
+                    kernel_y.update(0)
+                        .split(y, yo, yi, parallel_size)
+                        .parallel(yo)
+                        .vectorize(yi, vector_size)
+                    ;
+                    kernel_y.update(1)
+                        .split(y, yo, yi, parallel_size)
+                        .parallel(yo)
+                        .vectorize(yi, vector_size)
+                    ;
                     break;
 
                 case 4:
+                    output.compute_root()
+                        .fuse(y, c, yc).parallel(yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    interpolation_y.compute_at(output, yc)
+                        .vectorize(x, vector_size)
+                    ;
+                    kernel_x.compute_root();
+                    kernel_x.update(0)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_x.update(1)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_y.compute_at(output, yc);
+                    break;
+
+                case 5:
                     output.compute_root()
                         .reorder(x, c, y)
                         .parallel(y)
@@ -136,6 +165,38 @@ namespace {
                         .vectorize(xi, vector_size)
                     ;
                     kernel_y.compute_at(output, y);
+                    break;
+
+                case 1:
+                default:
+                    if(out_define_schedule) {
+                        output
+                            .reorder(x, c, y)
+                            .vectorize(x, vector_size)
+                        ;
+                        if(out_define_compute) {
+                            output.compute_root()
+                                .parallel(y)
+                            ;
+                        }
+                        intm_compute_level.set({output, c});
+                        kernel_y_compute_level.set({output, y});
+                    }
+                    interpolation_y.compute_at(intm_compute_level)
+                        .vectorize(x, vector_size)
+                    ;
+                    kernel_x.compute_root();
+                    kernel_x.update(0)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_x.update(1)
+                        .split(x, xo, xi, parallel_size)
+                        .parallel(xo)
+                        .vectorize(xi, vector_size)
+                    ;
+                    kernel_y.compute_at(kernel_y_compute_level);
                     break;
                 }
             }

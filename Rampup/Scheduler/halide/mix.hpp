@@ -6,7 +6,7 @@
 namespace {
     using namespace Halide;
 
-    class Mix : public Generator<Mix>, HalideBase {
+    class Mix : public Generator<Mix>, public HalideBase {
     private:
         Var x{"x"}, y{"y"}, c{"c"};
     public:
@@ -26,12 +26,18 @@ namespace {
                 output.set_estimates({{0, 4000}, {0, 3000}, {0, 3}});
             } else {
                 const int vector_size = get_target().natural_vector_size<float>();
-                output.compute_root()
-                    .bound(c, 0, 3)
-                    .unroll(c)
-                    .parallel(y)
-                    .vectorize(x, vector_size)
-                ;
+                if(out_define_schedule) {
+                    output
+                        .bound(c, 0, 3)
+                        .unroll(c)
+                        .vectorize(x, vector_size)
+                    ;
+                    if(out_define_compute) {
+                        output.compute_root()
+                            .parallel(y)
+                        ;
+                    }
+                }
             }
         }
     };

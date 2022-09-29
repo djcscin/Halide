@@ -4,7 +4,7 @@ GENERATOR_OUTPUTS  = o,h,stmt,schedule
 CXX_FLAGS          = -std=c++1z -fno-rtti
 OPT_FLAGS          = -O3
 INCLUDES           = -I${HALIDE_ROOT}/include -I../../include -Ihalide
-INCLUDES_TEST      = -I${HALIDE_ROOT}/include -I../../include -Ibin -Itest
+INCLUDES_TEST      = -I${HALIDE_ROOT}/include -I../../include -Ibin -Itest -I${HALIDE_ROOT}/tools
 CXX                = g++
 LD_FLAGS           = -lHalide -ldl -lpthread -lz
 LIBS               = -L${HALIDE_ROOT}/lib
@@ -22,7 +22,7 @@ IMAGE_IO_FLAGS = -I${HALIDE_ROOT_ARM}/tools -DHALIDE_NOPNG -DHALIDE_NO_PNG -DHAL
 endif
 
 ifndef SCHEDULER
-	SCHEDULER=0
+	SCHEDULER=1
 endif
 ifeq ($(SCHEDULER), 0)
 	AUTO_SCHEDULE=true
@@ -40,12 +40,8 @@ ifeq ($(AUTO_SCHEDULE), true)
 	endif
 endif
 
-ifndef PAR_SIZE_FACTOR
-	PAR_SIZE_FACTOR=1
-endif
-
-ifndef VEC_SIZE_FACTOR
-	VEC_SIZE_FACTOR=1
+ifndef SIZE_FACTOR
+	SIZE_FACTOR=1
 endif
 
 TARGET=arm-64-android
@@ -60,9 +56,9 @@ ifeq ($(PROFILE), true)
 	PROFILER=-profile
 endif
 
-PARS=scheduler=$(SCHEDULER) par_size_factor=$(PAR_SIZE_FACTOR) vec_size_factor=$(VEC_SIZE_FACTOR) \
+PARS=scheduler=$(SCHEDULER) size_factor=$(SIZE_FACTOR) \
  target=$(TARGET)$(PROFILER) auto_schedule=$(AUTO_SCHEDULE) $(AUTO_SCHEDULER_PARS)
-DEFAULT_PARS=target=$(TARGET) auto_schedule=true -p $(HALIDE_ROOT)/lib/libautoschedule_$(AUTO_SCHEDULER).so
+DEFAULT_PARS=target=$(TARGET) scheduler=1
 
 ifndef RUNS
 	RUNS=3
@@ -143,7 +139,7 @@ bin/runtime.o: bin/$(DUMMY).gen
 
 bin/test_%: test/%.cpp $(OBJS)
 	@mkdir -p $(@D)
-	@$(CXX_TEST) $^ $(OPT_FLAGS) $(CXX_FLAGS_TEST) $(INCLUDES_TEST) $(LD_FLAGS_TEST) $(LIBS_TEST) $(IMAGE_IO_FLAGS) -o $@
+	@$(CXX_TEST) $^ $(OPT_FLAGS) $(CXX_FLAGS) $(INCLUDES_TEST) $(LD_FLAGS_TEST) $(LIBS_TEST) $(IMAGE_IO_FLAGS) -o $@
 	@rm $(OBJS)
 	@rm bin/$(DUMMY).gen
 
@@ -164,14 +160,17 @@ ifndef SIGMA_RANGE
 	SIGMA_RANGE=0.05
 endif
 
+IMAGES=5a9e_20150405_165352_614 6G7M_20150307_175028_814 IMG_20200508_202014675 IMG_20201009_123817328
+
 ifeq ($(DESKTOP), true)
 test: bin/test_$(TEST)
 	@mkdir -p images_output
-	@for f in 5a9e_20150405_165352_614 6G7M_20150307_175028_814 IMG_20200508_202014675 IMG_20201009_123817328; do \
+	@for f in $(IMAGES); do \
 		echo $$f; \
 		for i in $(shell seq $(RUNS)); do \
 			$< $(IMAGES_DIR)/$$f.dng $(IMAGES_DIR)/$$f.mat $(IMAGES_DIR)/$$f.txt $(GAMMA) $(SIGMA_SPATIAL) \
 				$(SIGMA_RANGE) images_output/$$f.ppm; \
+			sleep 5; \
 		done; \
 	done
 	@rm $<
@@ -180,7 +179,7 @@ test: bin/test_$(TEST)
 	@mkdir -p images_output
 	@adb push $< $(MOBILE_DIR)/process
 	@adb shell chmod +x $(MOBILE_DIR)/process
-	@for f in 5a9e_20150405_165352_614 6G7M_20150307_175028_814 IMG_20200508_202014675 IMG_20201009_123817328; do \
+	@for f in $(IMAGES); do \
 		echo $$f; \
 		adb push $(IMAGES_DIR)/$$f.dng $(MOBILE_DIR)/$$f.dng; \
 		adb push $(IMAGES_DIR)/$$f.mat $(MOBILE_DIR)/$$f.mat; \
@@ -188,6 +187,7 @@ test: bin/test_$(TEST)
 		for i in $(shell seq $(RUNS)); do \
 			adb shell $(MOBILE_DIR)/process $(MOBILE_DIR)/$$f.dng $(MOBILE_DIR)/$$f.mat $(MOBILE_DIR)/$$f.txt $(GAMMA) $(SIGMA_SPATIAL) \
 				$(SIGMA_RANGE) $(MOBILE_DIR)/$$f.ppm; \
+			sleep 5; \
 		done; \
 		adb pull $(MOBILE_DIR)/$$f.ppm images_output/$$f.ppm; \
 	done

@@ -157,7 +157,7 @@ int test(int argc, char ** argv) {
 
         Buffer<float> im_mix(width, height, 3);
         auto lmix = [&]() {
-            mix(im_dms, im_dns, im_mix);
+            mix(im_r2y, im_dns, im_mix);
         };
         if(OP == MIX) {
             run_benchmark(numel, lmix);

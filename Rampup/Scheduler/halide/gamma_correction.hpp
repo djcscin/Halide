@@ -33,10 +33,16 @@ namespace {
                 Var yc{"yc"};
                 Var co{"co"}, ci{"ci"};
 
-                output.compute_root()
-                    .fuse(y, c, yc).parallel(yc)
-                    .vectorize(x, vector_size)
-                ;
+                if(out_define_schedule) {
+                    output
+                        .vectorize(x, vector_size)
+                    ;
+                    if(out_define_compute) {
+                        output.compute_root()
+                            .fuse(y, c, yc).parallel(yc)
+                        ;
+                    }
+                }
                 lut_gamma.compute_root()
                     .split(c, co, ci, parallel_size)
                     .parallel(co)
